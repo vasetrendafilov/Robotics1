@@ -1,5 +1,6 @@
 import math
 import sympy as sp
+import numpy as np
 import ipywidgets as widgets
 import plotly.graph_objects as go
 
@@ -840,11 +841,24 @@ class SerialLinkRobot:
             self.fig.data[-2].x, self.fig.data[-2].y, self.fig.data[-2].z = line_a.tolist()
             
             if self.toggle_trail.value:
-                self.fig.data[-1].x = self.fig.data[-1].x + (line_n.tolist()[0][0],)
-                self.fig.data[-1].y = self.fig.data[-1].y + (line_n.tolist()[1][0],)
-                self.fig.data[-1].z = self.fig.data[-1].z + (line_n.tolist()[2][0],)
-                self.trail_color_list += [self.trail_color_index]
-                self.fig.data[-1].marker['color'] = self.trail_color_list
+                if self.subs_joints[2][1] == sp.pi*0.5:
+                    self.fig.data[-1].x = self.fig.data[-1].x + (line_n.tolist()[0][0],)
+                    self.fig.data[-1].y = self.fig.data[-1].y + (line_n.tolist()[1][0],)
+                    self.fig.data[-1].z = self.fig.data[-1].z + (line_n.tolist()[2][0],)
+                    self.trail_color_list += [self.trail_color_index]
+                    self.fig.data[-1].marker['color'] = self.trail_color_list
+                elif self.subs_joints[2][1] == -sp.pi*0.5:
+                    x,y,z=list(self.fig.data[-1].x),list(self.fig.data[-1].y),list(self.fig.data[-1].z)
+                    ind_x = [i for i,val in enumerate(x) if val > line_n.tolist()[0][0]-0.2 and val < line_n.tolist()[0][0]+0.2]
+                    ind_y = [i for i,val in enumerate(y) if val > line_n.tolist()[1][0]-0.2 and val < line_n.tolist()[1][0]+0.2]
+                    ind_remove = [i for i in ind_x if i in ind_y]
+                    for ind in ind_remove:
+                        x.pop(ind_remove[0])
+                        y.pop(ind_remove[0])
+                        z.pop(ind_remove[0])
+                        self.fig.data[-1].x , self.fig.data[-1].y, self.fig.data[-1].z = tuple(x),tuple(y),tuple(z) 
+                     
+
         
     def update_button_trail_color(self, button):
         self.trail_color_index += 1
@@ -858,6 +872,101 @@ class SerialLinkRobot:
         with self.fig.batch_update():
             self.fig.data[-1].x,  self.fig.data[-1].y,  self.fig.data[-1].z = [], [], []
     
+    def write_text(self,text,ofset):
+        self.update_button_remove_trail(None)
+        for letter in text:
+            self.write_letter(letter,ofset)
+            ofset[0]+=1.5
+
+    def write_letter(self,letter,ofset):
+        # frame of the letter i 1x1 
+        if letter == 'T':
+            #(pocx, pocy,po so da odi i koja nasoka, kolku da otide)
+            comands = [(0,1,'1 0',np.arange(0.0,1.0,0.05)),(0.5,0,'0 1',np.arange(0.0,1.0,0.05))]
+        elif letter == 'E':
+            comands = [(0,1,'1 0',np.arange(0.0,1.0,0.05)),(0,0.5,'1 0',np.arange(0.0,1.0,0.05)),
+            (0,0,'1 0',np.arange(0.0,1.0,0.05)),(0,0,'0 1',np.arange(0.0,1.0,0.05))]
+        elif letter == 'I':
+            comands = [(0.5,0,'0 1',np.arange(0.0,1.0,0.05)),(0.2,0,'1 0',np.arange(0.0,0.6,0.05)),(0.2,1,'1 0',np.arange(0.0,0.6,0.05))]
+        elif letter == 'L':
+            comands = [(0,0,'0 1',np.arange(0.0,1.0,0.05)),(0,0,'1 0',np.arange(0.0,1.0,0.05))]
+        elif letter == 'H':
+            comands = [(0,0,'0 1',np.arange(0.0,1.0,0.05)),(1,0,'0 1',np.arange(0.0,1.0,0.05)),(0,0.5,'1 0',np.arange(0.0,1.0,0.05))]
+        elif letter == 'F':
+            comands = [(0,0,'0 1',np.arange(0.0,1.0,0.05)),(0,1,'1 0',np.arange(0.0,1.0,0.05)),(0,0.5,'1 0',np.arange(0.0,1.0,0.05))]
+        elif letter == 'N':
+            comands = [(0,0,'0 1',np.arange(0.0,1.0,0.05)),(1,0,'0 1',np.arange(0.0,1.0,0.05)),(0,1,'1 -1',np.arange(0.0,1.0,0.05))]
+        elif letter == 'M':
+            comands = [(0,0,'0 1',np.arange(0.0,1.0,0.05)),(1,0,'0 1',np.arange(0.0,1.0,0.05)),
+            (0,1,'1 -1',np.arange(0.0,0.5,0.05)),(0.5,0.5,'1 1',np.arange(0.0,0.5,0.05))]
+        elif letter == 'X':
+            comands = [(0,1,'1 -1',np.arange(0.0,1.0,0.05)),(0,0,'1 1',np.arange(0.0,1.0,0.05))]
+        elif letter == 'V':
+            comands = [(0,1,'0.5 -1',np.arange(0.0,1,0.05)),(0.5,0,'0.5 1',np.arange(0.0,1,0.05))]
+        elif letter == 'A':
+            comands = [(0,0,'0.5 1',np.arange(0.0,1,0.05)),(0.5,1,'0.5 -1',np.arange(0.0,1,0.05)),(0.3,0.5,'1 0',np.arange(0.0,0.5,0.05))]
+        for comand in comands:
+            for i in comand[3]:
+                scale = comand[2].split()
+                x, y, d1, d2 = (comand[0]+ofset[0])+i*float(scale[0]),(comand[1]+ofset[1])+i*float(scale[1]), self.links[0][3], self.links[1][3]
+                theta2 = sp.acos((x**2 + y**2 - d1**2 - d2**2)/(2*d1*d2))
+                theta1 = sp.atan2(y,x) - sp.atan2((d2*sp.sin(theta2)),(d1+d2*sp.cos(theta2)))
+                self.subs_joints[0] = self.subs_joints[0][0], theta1.evalf()
+                self.subs_joints[1] = self.subs_joints[1][0], theta2.evalf()
+                pose = hpose3()
+                subs = self.subs_joints + self.subs_additional
+                with self.fig.batch_update():
+                    for index, link in enumerate(self.links):
+                        index *= 5
+                        joint_type, theta, d, a, alpha = link
+                        next_pose = pose * dh_joint_to_joint(theta, d, a, alpha)
+                        pose_for_rectangluar_robot_shape = pose * htranslation3(z=d)
+                        pose_numeric = pose.subs(subs).evalf()
+                        next_pose_numeric = next_pose.subs(subs).evalf()
+                        pose_for_rectangluar_robot_shape_numeric = pose_for_rectangluar_robot_shape.subs(subs).evalf()
+                        pose_second_cone_numeric = pose_for_rectangluar_robot_shape_numeric if joint_type =='prismatic' else pose_numeric
+                        
+                        line_n, line_o, line_a = frame_lines(pose_numeric, line_length=0.5)
+                        self.fig.data[index+0].x, self.fig.data[index+0].y, self.fig.data[index+0].z = line_n.tolist()
+                        self.fig.data[index+1].x, self.fig.data[index+1].y, self.fig.data[index+1].z = line_a.tolist()
+                        
+                        cone_xyz = [pose_numeric[0, 3]], [pose_numeric[1, 3]], [pose_numeric[2, 3]]
+                        self.fig.data[index+2].x, self.fig.data[index+2].y, self.fig.data[index+2].z = cone_xyz
+                        cone_uvw = [pose_numeric[0, 2]], [pose_numeric[1, 2]], [pose_numeric[2, 2]]
+                        self.fig.data[index+2].u, self.fig.data[index+2].v, self.fig.data[index+2].w = cone_uvw
+                        
+                        cone_xyz = [pose_second_cone_numeric[0, 3]], [pose_second_cone_numeric[1, 3]], [pose_second_cone_numeric[2, 3]]
+                        self.fig.data[index+3].x, self.fig.data[index+3].y, self.fig.data[index+3].z = cone_xyz
+                        cone_uvw = [-pose_numeric[0, 2]], [-pose_numeric[1, 2]], [-pose_numeric[2, 2]]
+                        self.fig.data[index+3].u, self.fig.data[index+3].v, self.fig.data[index+3].w = cone_uvw
+                        
+                        self.fig.data[index+4].x = [pose_numeric[0, 3], pose_for_rectangluar_robot_shape_numeric[0, 3], next_pose_numeric[0, 3]]
+                        self.fig.data[index+4].y = [pose_numeric[1, 3], pose_for_rectangluar_robot_shape_numeric[1, 3], next_pose_numeric[1, 3]]
+                        self.fig.data[index+4].z = [pose_numeric[2, 3], pose_for_rectangluar_robot_shape_numeric[2, 3], next_pose_numeric[2, 3]]
+                        pose = next_pose
+                    
+                    line_n, line_o, line_a = frame_lines(pose.subs(subs).evalf(), line_length=0.5)
+                    self.fig.data[-3].x, self.fig.data[-3].y, self.fig.data[-3].z = line_n.tolist()
+                    self.fig.data[-2].x, self.fig.data[-2].y, self.fig.data[-2].z = line_a.tolist()
+                    
+                    if self.toggle_trail.value:
+                        if self.subs_joints[2][1] == sp.pi*0.5:
+                            self.fig.data[-1].x = self.fig.data[-1].x + (line_n.tolist()[0][0],)
+                            self.fig.data[-1].y = self.fig.data[-1].y + (line_n.tolist()[1][0],)
+                            self.fig.data[-1].z = self.fig.data[-1].z + (line_n.tolist()[2][0],)
+                            self.trail_color_list += [self.trail_color_index]
+                            self.fig.data[-1].marker['color'] = self.trail_color_list
+                        elif self.subs_joints[2][1] == -sp.pi*0.5:
+                            x,y,z=list(self.fig.data[-1].x),list(self.fig.data[-1].y),list(self.fig.data[-1].z)
+                            ind_x = [i for i,val in enumerate(x) if val > line_n.tolist()[0][0]-0.2 and val < line_n.tolist()[0][0]+0.2]
+                            ind_y = [i for i,val in enumerate(y) if val > line_n.tolist()[1][0]-0.2 and val < line_n.tolist()[1][0]+0.2]
+                            ind_remove = [i for i in ind_x if i in ind_y]
+                            for ind in ind_remove:
+                                x.pop(ind_remove[0])
+                                y.pop(ind_remove[0])
+                                z.pop(ind_remove[0])
+                                self.fig.data[-1].x , self.fig.data[-1].y, self.fig.data[-1].z = tuple(x),tuple(y),tuple(z) 
+
     def interact(self, figure_width=800, figure_height=600):
         """ Interact with the constructed robot arm. """
         if not self.links:
@@ -926,5 +1035,5 @@ class SerialLinkRobot:
             line_width=5, line_length=0.5)
         scatter_data += scatter_pose[:1] + scatter_pose[2:]
         x, y, z = scatter_pose[0].x[0], scatter_pose[0].y[0], scatter_pose[0].z[0]
-        scatter_data += (go.Scatter3d(x=[x], y=[y], z=[z], mode='markers', name='', marker_size=2, marker_cmin=0),)
+        scatter_data += (go.Scatter3d(x=[x], y=[y], z=[z], mode='markers', name='', marker_size=5, marker_cmin=0),)
         return scatter_data
